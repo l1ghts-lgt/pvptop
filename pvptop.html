@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>pvptop</title>
+
+<style>
+body {
+  margin:0;
+  font-family:Arial;
+  background:#0b0f1a;
+  color:white;
+}
+
+#main {
+  padding:20px;
+  text-align:center;
+}
+
+.player {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:#1f2937;
+  margin:8px auto;
+  padding:10px;
+  border-radius:10px;
+  width:400px;
+  cursor:pointer;
+}
+
+.player:hover {
+  background:#374151;
+}
+
+.left {
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.player img {
+  width:40px;
+  border-radius:50%;
+}
+
+.selected {
+  outline:3px solid yellow;
+}
+
+button {
+  background:#2563eb;
+  color:white;
+  border:none;
+  padding:6px 10px;
+  border-radius:8px;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div id="main">
+
+<h1>👀 pvptop</h1>
+
+<div id="loginBox">
+  <input id="password" type="password" placeholder="Пароль">
+  <button onclick="login()">Увійти</button>
+</div>
+
+<div id="adminPanel" style="display:none;">
+  <input id="name" placeholder="Нік">
+  <input id="points" type="number" placeholder="ELO">
+  <input id="wins" type="number" placeholder="W">
+  <input id="loses" type="number" placeholder="L">
+  <button onclick="addPlayer()">Додати</button>
+</div>
+
+<br>
+
+<div id="fightBox">
+  <div id="selectedText">Вибери 2 гравців</div>
+  <button onclick="fight()">⚔️ Бій</button>
+</div>
+
+<div id="list"></div>
+
+</div>
+
+<script>
+const ADMIN_PASSWORD = "oleinik@31";
+let isAdmin = false;
+
+let players = JSON.parse(localStorage.getItem('players')) || [];
+let selected = [];
+
+function login() {
+  if(password.value === ADMIN_PASSWORD) {
+    isAdmin = true;
+    adminPanel.style.display = 'block';
+    loginBox.style.display = 'none';
+  } else {
+    alert("Неправильний пароль");
+  }
+}
+
+function save() {
+  localStorage.setItem('players', JSON.stringify(players));
+}
+
+function getAvatar(name) {
+  return `https://mc-heads.net/avatar/${name}`;
+}
+
+function addPlayer() {
+  if(!isAdmin) return;
+
+  const playerName = name.value.trim();
+  const playerPoints = parseInt(points.value);
+
+  if(playerName === "" || isNaN(playerPoints)) {
+    alert("Заповни нік і ELO");
+    return;
+  }
+
+  players.push({
+    name: playerName,
+    points: playerPoints,
+    wins: parseInt(wins.value) || 0,
+    loses: parseInt(loses.value) || 0
+  });
+
+  name.value = '';
+  points.value = '';
+  wins.value = '';
+  loses.value = '';
+
+  save();
+  render();
+}
+
+function selectPlayer(index) {
+  if(selected.includes(index)) {
+    selected = selected.filter(i => i !== index);
+  } else {
+    if(selected.length < 2) selected.push(index);
+  }
+  render();
+}
+
+function fight() {
+  if(selected.length < 2) return alert("Вибери 2 гравців");
+
+  const p1 = players[selected[0]];
+  const p2 = players[selected[1]];
+
+  const winner = Math.random() > 0.5 ? p1 : p2;
+  const loser = winner === p1 ? p2 : p1;
+
+  winner.points += 10;
+  loser.points -= 10;
+  if(loser.points < 0) loser.points = 0;
+
+  winner.wins++;
+  loser.loses++;
+
+  alert(`${p1.name} vs ${p2.name}\n🏆 ${winner.name}`);
+
+  selected = [];
+
+  save();
+  render();
+}
+
+function render() {
+  list.innerHTML = '';
+
+  const sorted = [...players].sort((a,b)=>b.points-a.points);
+
+  sorted.forEach((p,i)=>{
+    const index = players.indexOf(p);
+
+    const div = document.createElement('div');
+    div.className = `player ${selected.includes(index) ? 'selected' : ''}`;
+    div.onclick = () => selectPlayer(index);
+
+    div.innerHTML = `
+      <div class="left">
+        <img src="${getAvatar(p.name)}">
+        <div>
+          <b>топ${i+1} — ${p.name}</b><br>
+          ${p.points} elo<br>
+          W:${p.wins} L:${p.loses}
+        </div>
+      </div>
+    `;
+
+    list.appendChild(div);
+  });
+
+  if(selected.length === 2) {
+    const p1 = players[selected[0]];
+    const p2 = players[selected[1]];
+    selectedText.innerText = `${p1.name} vs ${p2.name}`;
+  } else {
+    selectedText.innerText = "Вибери 2 гравців";
+  }
+}
+
+render();
+</script>
+
+</body>
+</html>
